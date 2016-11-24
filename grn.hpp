@@ -212,7 +212,7 @@ template <typename Implem> class GRN {
 			newReguls[name.str()] = i.second;
 		}
 		proteinsRefs[to_underlying(ProteinType::regul)] = newReguls;
-	};
+    }
 
 	/**************************************
 	 *       MUTATION & CROSSOVER
