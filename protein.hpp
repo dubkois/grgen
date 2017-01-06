@@ -13,8 +13,8 @@
 
 #define MULTIPLE_MUTATION_PROBA 0.1
 template <unsigned int nbCoords, typename CoordsType = double,
-          CoordsType minCoord = std::numeric_limits<CoordsType>::lowest(),
-          int maxCoord = std::numeric_limits<CoordsType>::max()>
+          CoordsType minCoord = CoordsType(0),
+          CoordsType maxCoord = CoordsType(1)>
 struct Protein {
 	using json = nlohmann::json;
 
@@ -89,7 +89,7 @@ struct Protein {
 		return sqrt(std::pow((maxCoord - minCoord), 2) * nbCoords);
 	}
 
-	double getDistanceWith(const Protein &p) {
+        double getDistanceWith(const Protein &p) const {
 		double sum = 0;
 		for (size_t i = 0; i < nbCoords; ++i) {
 			sum += std::pow(
