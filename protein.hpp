@@ -13,8 +13,7 @@
 
 #define MULTIPLE_MUTATION_PROBA 0.1
 template <unsigned int nbCoords, typename CoordsType = double,
-          CoordsType minCoord = CoordsType(0),
-          CoordsType maxCoord = CoordsType(1)>
+          int minCoord = 0, int maxCoord = 1>
 struct Protein {
 	using json = nlohmann::json;
 
@@ -32,7 +31,7 @@ struct Protein {
 
 	// switching between integral or real random distribution
 	template <typename T = CoordsType>
-	typename std::enable_if<!std::is_integral<T>::value, T>::type getRandomCoord() {
+        typename std::enable_if<std::is_floating_point<T>::value, T>::type getRandomCoord() {
 		std::uniform_real_distribution<double> distribution(static_cast<double>(minCoord),
 		                                                    static_cast<double>(maxCoord));
 		return static_cast<CoordsType>(distribution(grnRand));
