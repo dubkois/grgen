@@ -30,13 +30,17 @@ struct Protein {
 	bool operator!=(const Protein &b) const { return !(*this == b); }
 
 	// switching between integral or real random distribution
-	template <typename T = CoordsType>
+        template <typename T = CoordsType>
+        typename std::enable_if<std::is_class<T>::value, T>::type getRandomCoord() {
+                return getRandomCoord();
+        }
+        template <typename T = CoordsType>
         typename std::enable_if<std::is_floating_point<T>::value, T>::type getRandomCoord() {
-		std::uniform_real_distribution<double> distribution(static_cast<double>(minCoord),
-		                                                    static_cast<double>(maxCoord));
-		return static_cast<CoordsType>(distribution(grnRand));
-	}
-	template <typename T = CoordsType>
+                std::uniform_real_distribution<double> distribution(static_cast<double>(minCoord),
+                                                                    static_cast<double>(maxCoord));
+                return static_cast<CoordsType>(distribution(grnRand));
+        }
+        template <typename T = CoordsType>
 	typename std::enable_if<std::is_integral<T>::value, T>::type getRandomCoord() {
 		std::uniform_int_distribution<int> distribution(minCoord, maxCoord);
 		return static_cast<CoordsType>(distribution(grnRand));

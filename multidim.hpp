@@ -12,13 +12,64 @@ using namespace std;
 
 template <size_t D>
 struct MultiDim {
+    template<typename T>
+    class Vec : public std::array<T, D> {
+    public:
+        constexpr double operator- (const Vec &v) const {
+            double sum = 0;
+            for (size_t i=0; i<D; i++) {
+                double d = (*this)[i] - v[i];
+                sum += d*d;
+            }
+            return sqrt(sum);
+        }
+
+        constexpr bool operator== (const Vec &v) const {
+            bool ok = true;
+            for (size_t i=0; i<D; i++)
+                ok &= ((*this)[i] == v[i]);
+            return ok;
+        }
+
+        constexpr bool operator!= (const Vec &v) const {
+            return !((*this) == v);
+        }
+
+        explicit constexpr operator double() const {
+            double sum = 0;
+            for (size_t i=0; i<D; i++) {
+                double d = (*this)[i];
+                sum += d*d;
+            }
+            return sqrt(sum);
+        }
+
+        explicit constexpr operator int() const {
+            int h = 0;
+            for (size_t i=0; i<D; i++)
+                h = h ^ (*this)[i];
+            return h;
+        }
+
+        template <typename ...E>
+        Vec(E&& ...l) : std::array<T,D>{{std::forward(l)...}} {}
+
+        Vec (const nlohmann::json &j) : std::array<T,D>(j) {}
+
+//        constexpr operator nlohmann::json() const {
+//            return "";
+//        }
+    };
+
 public:
     // we use 3 coordinates proteins (id, enh, inh)
-//    static constexpr int DIM = D;
-//    using ProteinCoord_t = std::array<int,D>;
-    using ProteinCoord_t = int;
-    static constexpr ProteinCoord_t IDSIZE = 32;
-    using Protein_t = Protein<3, ProteinCoord_t, 0, IDSIZE>;
+    using ProteinInternalCoord_t = int;
+    using ProteinCoord_t = Vec<ProteinInternalCoord_t>;
+    static constexpr ProteinInternalCoord_t PROTEIN_LOWER = 0;
+    static constexpr ProteinInternalCoord_t PROTEIN_UPPER = 32;
+    static constexpr double PROTEIN_MAX_AMPLITUDE = (PROTEIN_UPPER + PROTEIN_LOWER) / 2.;
+    static constexpr double PROTEIN_MAX_DISTANCE = double(ProteinCoord_t((PROTEIN_LOWER + PROTEIN_LOWER) / 2.));
+    using Protein_t = Protein<3, ProteinCoord_t, PROTEIN_LOWER, PROTEIN_UPPER>;
 
     // we need 2 parameters (beta, alpha)
     static constexpr unsigned int nbParams = 2;
@@ -70,7 +121,9 @@ public:
     }
 
     static constexpr double similarity (const ProteinCoord_t &c0, const ProteinCoord_t &c1) {
-        return static_cast<double>(IDSIZE - abs(c0 - c1));
+        return static_cast<double>(
+            PROTEIN_MAX_AMPLITUDE - std::min(fabs(c0 - c1), fabs(c1 - c0))
+        );
     }
 
     template <typename GRN> void step(GRN& grn, unsigned int nbSteps) {
@@ -105,5 +158,20 @@ public:
             }
         }
     }
+
+    static constexpr ProteinCoord_t getRandomCoord (void) {
+        using dist_t = std::conditional<
+            std::is_integral<ProteinInternalCoord_t>::value,
+            std::uniform_int_distribution<ProteinInternalCoord_t>,
+            std::uniform_real_distribution<ProteinInternalCoord_t>
+        >::type;
+
+        ProteinCoord_t vec;
+        dist_t dist (PROTEIN_LOWER, PROTEIN_UPPER);
+        for (auto &val: vec)
+            val = dist(grnRand);
+        return vec;
+    }
+
 };
 #endif
