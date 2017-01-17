@@ -1,5 +1,5 @@
-#ifndef CLASSIC_HPP
-#define CLASSIC_HPP
+#ifndef _MULTI_DIMENSIONS_HPP_
+#define _MULTI_DIMENSIONS_HPP_
 #include <iostream>
 #include <array>
 #include <vector>
@@ -10,10 +10,10 @@
 
 using namespace std;
 
-template <size_t D>
+template <typename T, size_t D, int LOWER=-1, int UPPER=1>
 struct MultiDim {
-    template<typename T>
     class Vec : public std::array<T, D> {
+        using Base = std::array<T, D>;
     public:
         constexpr double operator- (const Vec &v) const {
             double sum = 0;
@@ -51,10 +51,14 @@ struct MultiDim {
             return h;
         }
 
-        template <typename ...E>
-        Vec(E&& ...l) : std::array<T,D>{{std::forward(l)...}} {}
+//        template <typename ...E>
+//        Vec(E&& ...l) : std::array<T,D>{{std::forward(l)...}} {}
 
-        Vec (const nlohmann::json &j) : std::array<T,D>(j) {}
+        Vec (void) {
+            Base::fill((LOWER + UPPER) / 2.);
+        }
+
+        explicit Vec (const nlohmann::json &j) : Base(j.get<Base>()) {}
 
 //        constexpr operator nlohmann::json() const {
 //            return "";
@@ -63,13 +67,13 @@ struct MultiDim {
 
 public:
     // we use 3 coordinates proteins (id, enh, inh)
-    using ProteinInternalCoord_t = int;
-    using ProteinCoord_t = Vec<ProteinInternalCoord_t>;
-    static constexpr ProteinInternalCoord_t PROTEIN_LOWER = 0;
-    static constexpr ProteinInternalCoord_t PROTEIN_UPPER = 32;
-    static constexpr double PROTEIN_MAX_AMPLITUDE = (PROTEIN_UPPER + PROTEIN_LOWER) / 2.;
-    static constexpr double PROTEIN_MAX_DISTANCE = double(ProteinCoord_t((PROTEIN_LOWER + PROTEIN_LOWER) / 2.));
-    using Protein_t = Protein<3, ProteinCoord_t, PROTEIN_LOWER, PROTEIN_UPPER>;
+    using ProteinInternalCoord_t = T;
+    using ProteinCoord_t = Vec;
+    static constexpr T PROTEIN_LOWER = LOWER;
+    static constexpr T PROTEIN_UPPER = UPPER;
+    static constexpr double PROTEIN_MAX_AMPLITUDE = (LOWER + UPPER) / 2.;
+    static constexpr double PROTEIN_MAX_DISTANCE = double(Vec((LOWER + UPPER) / 2.));
+    using Protein_t = Protein<3, Vec, LOWER, UPPER>;
 
     // we need 2 parameters (beta, alpha)
     static constexpr unsigned int nbParams = 2;
@@ -160,7 +164,7 @@ public:
     }
 
     static constexpr ProteinCoord_t getRandomCoord (void) {
-        using dist_t = std::conditional<
+        using dist_t = typename std::conditional<
             std::is_integral<ProteinInternalCoord_t>::value,
             std::uniform_int_distribution<ProteinInternalCoord_t>,
             std::uniform_real_distribution<ProteinInternalCoord_t>
