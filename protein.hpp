@@ -32,7 +32,7 @@ struct Protein {
     // switching between integral or real random distribution
     template <typename T = CoordsType>
     typename std::enable_if<std::is_class<T>::value, T>::type getRandomCoord() {
-        return getRandomCoord();
+        return CoordsType::getRandomCoord();
     }
     template <typename T = CoordsType>
     typename std::enable_if<std::is_floating_point<T>::value, T>::type getRandomCoord() {
@@ -64,9 +64,11 @@ struct Protein {
         assert(o.count("c"));
         c = o.at("c");
         if (o.count("pc")) prevc = o.at("pc");
-        auto vcoords = o.at("coords").get<std::vector<CoordsType>>();
+
+        auto vcoords = o.at("coords");
         assert(vcoords.size() == coords.size());
-        for (size_t i = 0; i < vcoords.size(); ++i) coords[i] = vcoords[i];
+        for (size_t i = 0; i < vcoords.size(); ++i)
+            coords[i] = vcoords[i];
     }
 
     void reset() {

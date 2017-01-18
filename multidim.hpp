@@ -1,44 +1,40 @@
 #ifndef _MULTI_DIMENSIONS_HPP_
 #define _MULTI_DIMENSIONS_HPP_
-#include <iostream>
-#include <array>
-#include <vector>
-#include <utility>
-#include <unordered_map>
+
+#include <cstring>
+
 #include "common.h"
 #include "protein.hpp"
 
-using namespace std;
-
 template <typename T, size_t D, int LOWER=-1, int UPPER=1>
 struct MultiDim {
-    class Vec : public std::array<T, D> {
-        using Base = std::array<T, D>;
+    using json = nlohmann::json;
+
+    class Vec {
+        static constexpr T AMPLITUDE = UPPER - LOWER;
+//        static constexpr T HALF_AMPLITUDE = AMPLITUDE / 2.;
+
+        static constexpr double CORNERS_DISTANCE = sqrt(D * AMPLITUDE*AMPLITUDE);
+
+        std::array<T,D> _data;
+
     public:
+        static constexpr double MAX_DISTANCE = CORNERS_DISTANCE / 2.;
+
         constexpr double operator- (const Vec &v) const {
             double sum = 0;
             for (size_t i=0; i<D; i++) {
-                double d = (*this)[i] - v[i];
+                double d = _data[i] - v._data[i];
                 sum += d*d;
             }
-            return sqrt(sum);
-        }
-
-        constexpr bool operator== (const Vec &v) const {
-            bool ok = true;
-            for (size_t i=0; i<D; i++)
-                ok &= ((*this)[i] == v[i]);
-            return ok;
-        }
-
-        constexpr bool operator!= (const Vec &v) const {
-            return !((*this) == v);
+            sum = sqrt(sum);
+            return std::min(sum, CORNERS_DISTANCE - sum);
         }
 
         explicit constexpr operator double() const {
             double sum = 0;
             for (size_t i=0; i<D; i++) {
-                double d = (*this)[i];
+                double d = _data[i];
                 sum += d*d;
             }
             return sqrt(sum);
@@ -47,40 +43,56 @@ struct MultiDim {
         explicit constexpr operator int() const {
             int h = 0;
             for (size_t i=0; i<D; i++)
-                h = h ^ (*this)[i];
+                h = h ^ _data[i];
             return h;
         }
 
-//        template <typename ...E>
-//        Vec(E&& ...l) : std::array<T,D>{{std::forward(l)...}} {}
+        constexpr Vec (T val=T((LOWER+UPPER)/2.))
+            : _data ({val}) {}
 
-        Vec (void) {
-            Base::fill((LOWER + UPPER) / 2.);
+        Vec (const json &j) {
+            auto vcoords = j.get<std::vector<T>>();
+            std::copy(vcoords.begin(), vcoords.end(), _data.begin());
         }
 
-        explicit Vec (const nlohmann::json &j) : Base(j.get<Base>()) {}
+        explicit constexpr operator json() const {
+            return json(_data);
+        }
 
-//        constexpr operator nlohmann::json() const {
-//            return "";
-//        }
+        friend std::ostream& operator<< (std::ostream &os, const Vec &v) {
+            std::ostream_iterator<T> output(os, " ");
+            os << "(";
+            std::copy(v._data.begin(), v._data.end(), output);
+            return os << ")";
+        }
+
+        static constexpr Vec getRandomCoord (void) {
+            using dist_t = typename std::conditional<
+                std::is_integral<T>::value,
+                std::uniform_int_distribution<T>,
+                std::uniform_real_distribution<T>
+            >::type;
+
+            Vec vec;
+            dist_t dist (LOWER, UPPER);
+            for (auto &val: vec._data)
+                val = dist(grnRand);
+            return vec;
+        }
     };
 
 public:
     // we use 3 coordinates proteins (id, enh, inh)
     using ProteinInternalCoord_t = T;
     using ProteinCoord_t = Vec;
-    static constexpr T PROTEIN_LOWER = LOWER;
-    static constexpr T PROTEIN_UPPER = UPPER;
-    static constexpr double PROTEIN_MAX_AMPLITUDE = (LOWER + UPPER) / 2.;
-    static constexpr double PROTEIN_MAX_DISTANCE = double(Vec((LOWER + UPPER) / 2.));
-    using Protein_t = Protein<3, Vec, LOWER, UPPER>;
+    using Protein_t = Protein<3, ProteinCoord_t, LOWER, UPPER>;
 
     // we need 2 parameters (beta, alpha)
     static constexpr unsigned int nbParams = 2;
     // and we produce 2 dimensional signatures (enhnance, inhibit)
     static constexpr unsigned int nbSignatureParams = 2;
 
-    static const array<pair<double, double>, nbParams> paramsLimits() {
+    static const std::array<std::pair<double, double>, nbParams> paramsLimits() {
         return {{{0.5, 2.0}, {0.5, 2.0}}};
     }
 
@@ -125,8 +137,14 @@ public:
     }
 
     static constexpr double similarity (const ProteinCoord_t &c0, const ProteinCoord_t &c1) {
+//        std::cout << "sim(" << c0 << ", " << c1 << ") = "
+//                  << Vec::MAX_DISTANCE << " - ("
+//                  << c0 - c1
+//                  << ") = "
+//                  << Vec::MAX_DISTANCE - (c0 - c1)
+//                  << std::endl;
         return static_cast<double>(
-            PROTEIN_MAX_AMPLITUDE - std::min(fabs(c0 - c1), fabs(c1 - c0))
+            Vec::MAX_DISTANCE - (c0 - c1)
         );
     }
 
@@ -162,20 +180,6 @@ public:
             }
         }
     }
-
-    static constexpr ProteinCoord_t getRandomCoord (void) {
-        using dist_t = typename std::conditional<
-            std::is_integral<ProteinInternalCoord_t>::value,
-            std::uniform_int_distribution<ProteinInternalCoord_t>,
-            std::uniform_real_distribution<ProteinInternalCoord_t>
-        >::type;
-
-        ProteinCoord_t vec;
-        dist_t dist (PROTEIN_LOWER, PROTEIN_UPPER);
-        for (auto &val: vec)
-            val = dist(grnRand);
-        return vec;
-    }
-
 };
+
 #endif
