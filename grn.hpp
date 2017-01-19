@@ -78,9 +78,9 @@ template <typename Implem> class GRN {
         implem.updateSignatures(*this);
     }
 
-    vector<vector<InfluenceVec>> getSignatures() { return signatures; }
+    const vector<vector<InfluenceVec>>& getSignatures() const { return signatures; }
 
-    const decltype(proteinsRefs)& getProteinsRefs(void) { return proteinsRefs; }
+    const decltype(proteinsRefs)& getProteinsRefs(void) const { return proteinsRefs; }
 
     void step(unsigned int nbSteps = 1) { implem.step(*this, nbSteps); }
 
