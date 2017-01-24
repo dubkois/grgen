@@ -251,7 +251,7 @@ template <typename Implem> class GRN {
         updateSignatures();
     }
 
-    GRN crossover(const GRN& other) { return GRN::crossover(*this, other); }
+    GRN crossover(const GRN& other) const { return GRN::crossover(*this, other); }
 
     static GRN crossover(const GRN& g0, const GRN& g1) {
         assert(g0.proteinsRefs.size() == g1.proteinsRefs.size());
